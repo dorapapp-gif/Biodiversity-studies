@@ -510,6 +510,7 @@ Sample richness.
 ```{r}
 div_richness(comm_dummy, estimator = "naive")
 ```
+
 Estimating with Chao estimator
 
 ```{r}
@@ -533,6 +534,7 @@ Whitteker plot for different data sets - different subplots
 ```{r}
 paracou_6_abd %>% autoplot
 ```
+
 All gathered points
 
 ```{r}
@@ -562,31 +564,47 @@ p6_abundances %>%
   arrange(desc(abundance))
 ```
 
-
 Estimators of richness.
 
 ```{r}
+#in 2 it uses jacknife 0 then 1, and computes a confidence interval
+
+#in paracou maybe there are too many doubletons than singletons but based on the idea of Brose, we would chose jacknife 1 even though 2 gives higher number
+
 div_richness(p6_abundances, estimator = "naive") %>% 
   bind_rows(div_richness(p6_abundances, estimator = "Chao1")) %>% 
   bind_rows(div_richness(p6_abundances, estimator = "iChao")) %>% 
   # Default estimator
   bind_rows(div_richness(p6_abundances, estimator = "jackknife")) %>% 
   bind_rows(div_richness(p6_abundances, estimator = "jackknife", jack_max = 1))
+#jack_max forces to be kept at 1 
 ```
 
 ## Interpolation / extrapolation
 
 Diversity of 1 ha in Paracou.
+Accumulation curve is obtained by rarification.
 
 ```{r}
-# Number of trees per hectare
+# Number of trees per hectare - to get the number for standardisation
+#density is calculated - density / 6.25 ha
+#then this new number is used to rarification
+p6_density <- abd_sum(p6_abundances, as_numeric = TRUE) / 6.25
+# Richness
+p6_abundances %>% 
+  div_richness(level = round(p6_density)) #level is injected here for rarification
+```
+
+Diversity of 10 ha in Paracou.
+
+```{r}
 p6_density <- abd_sum(p6_abundances, as_numeric = TRUE) / 6.25
 # Richness
 p6_abundances %>% 
   div_richness(level = round(p6_density))
 ```
 
-Diversity of 10 ha in Paracou.
+Diversity of 10 ha plot in Paracou:
 
 ```{r}
 # Richness
@@ -594,7 +612,25 @@ p6_abundances %>%
   div_richness(level = round(10 * p6_density))
 ```
 
+level is the number of species.
+
+How to deal with calculations?
+
+either calculate syptotic diversities for both (with Chao or Jack) but sometimes it is not possible to use - fx size is too small
+
+check for limitations of asymptotic diversity calculation
+
+or you decide to standardize - that can be used for comparaison.
+How big that should be?
+
+Twice the size of the smallest plot
+
+small or large to use as standard?
+
 # Shannon
+
+Quantify the complexity.
+The number of possible states.
 
 ## Information function
 
@@ -607,9 +643,15 @@ ggplot() +
   labs(x = "Probability", y = "Information")
 ```
 
+with 1 probability information - or surprise is very low
+
 Information brought by a species: $p_s \ln(1 / p_s)$.
 
 ```{r}
+# the surprise of seeing the rare tree only once is actually not that surprising - bringing in the concept of finding more of the same species - if we find more of them - we are more and more suprised
+# ps time logged the 
+# the weighted information plot where the numbers of species are considered 
+#its a summed information - weithted information
 ggplot() +
   geom_function(fun = \(p) {p * log(1 / p)}, n = 1001) +
   labs(x = "Probability", y = "Information")
@@ -617,8 +659,11 @@ ggplot() +
 
 ## Paracou 6
 
-Estimators. 
- 
+Estimators.
+
+Shannon entropy estimators
+
+The three different types - H is entropy - entropy is estimated and used to calculate unseen diversity
 
 ```{r}
 ent_shannon(p6_abundances, estimator = "naive") %>% 
@@ -629,12 +674,18 @@ ent_shannon(p6_abundances, estimator = "naive") %>%
 #weight is the same for all - because they are standardized on the size
 ```
 
+H is difficult to interpret - put into numbers - effective number of species
+
+Calculate the diversity - effective number
+
 Effective number of species: $e^H$.
 
 ```{r}
 p6_shannon %>% 
   mutate(diversity = exp(entropy))
 ```
+
+101 or 110 species - species per plot
 
 Unveiled distribution.
 
@@ -718,6 +769,10 @@ ggplot() +
 
 Diversity profile.
 
+With profile_hill calculate the diversity profile
+
+Hill number - diversity number
+
 ```{r}
 p6_abundances %>% 
   profile_hill() %>% 
@@ -791,8 +846,7 @@ profile_hill(p6_abundances, orders = q_seq_0_4) %>%
 ## Standardized diversity
 
 The sampling effort is very different: 50 ha in BCI, 6.25 ha in Paracou.
-- standardizing on a chosen area size
-The asymptotic estimation is less reliable in Paracou.
+- standardizing on a chosen area size The asymptotic estimation is less reliable in Paracou.
 
 Compare diversity at the same sampling effort, say 10 ha.
 
@@ -1065,7 +1119,7 @@ Change the variability (0.1 first) and run the code again.
 
 ## Mock data
 
-Three habitats: A, B, C. 
+Three habitats: A, B, C.
 
 ```{r}
 matrix( #original with numbers of 1 - 1 single of species
@@ -1094,9 +1148,21 @@ div_richness(mock_island_abd, gamma = TRUE) #for metacommunity all the species t
 
 Multiplicative partitioning: 10 effective species ($\gamma$) = 5 effective species per habitat ($\alpha$) times 2 habitats ($\beta$).
 
+Because of the naive estimator does not work - we need to remove it
+
+```{r}
+#div_part(mock_island_abd, q = 0, estimator = "naive")
+```
+
 ```{r}
 div_part(mock_island_abd, q = 0)
 ```
+
+Alpha is diversity in communities (number of species)
+
+beta is gamma/alpha
+
+gamma metacommunity - all
 
 Additive partitioning: 10 effective species ($\gamma$) = 5 effective species per habitat ($\alpha$) + 5 more species ($\beta$).
 
@@ -1133,6 +1199,8 @@ paracou_6_abd %>%
   print() ->
   paracou_6_alpha
 ```
+
+check the q number!
 
 ```{r}
 # Gamma entropy
