@@ -59,6 +59,8 @@ knitr::knit_hooks$set(
 
 # Motivation
 
+upload
+
 This document contains code chunks to help you understanding the course.
 Don't hesitate to modify them, add your own notes and code.
 
@@ -67,8 +69,6 @@ It comes with a practical you will run at home (`Biodiv-Practical.Rmd`).
 # Species distributions
 
 ## Figures
-
-explicaton
 
 Explication of data: 50 (representing 50 ha) rows and 225 species (columns)
 
