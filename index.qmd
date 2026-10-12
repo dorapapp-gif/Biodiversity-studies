@@ -68,6 +68,10 @@ It comes with a practical you will run at home (`Biodiv-Practical.Rmd`).
 
 ## Figures
 
+Explication of data: 50 (representing 50 ha) rows and 225 species (columns)
+
+Exploring the data with different representations; histogram with a log axis and line density plot with normal axes.
+
 ### Preston diagram
 
 ```{r}
@@ -75,24 +79,32 @@ library("tidyverse")
 library("vegan")
 data(BCI)
 # Sum the 50 1-ha plots
-BCI_50ha_abd <- colSums(BCI)
-BCI_50ha_abd %>% 
-  log10() %>% 
-  hist(breaks = 15, main = "Preston diagram")
+BCI_50ha_abd <- colSums(BCI) #all trees in BCI
+BCI_50ha_abd/50 #trees per hectar (in Paracou there is 600 per ha)
+BCI_50ha_abd %>% # BCI contains this number of trees per plot
+  #need to put it in a log scale in order to see the real distibution. If not, we loose the view on the rare species because around 50 species will take up most of the space
+  log10() %>% #log scale representation 0 is 1 (log1=0), 2 is 100, 3 is 1000
+  hist(breaks = 15, main = "Preston diagram") #gives 16 bars - 15 breaks between them, without defined breaks the histogram is automaticaly created that might not be very precise
 ```
 
 Probability densities
 
 ```{r}
 BCI_50ha_abd %>% 
-  tibble(abundance = .) %>% 
-  ggplot() +
-  # Bounded density
+  tibble(abundance = .) %>% #ggplot cannot work with vectors so it needs to be transformed into a tibble so i have only the numbers
+  ggplot() + 
+  # Bounded density - bounds means that the density is bounded - there are no possible values below 0 
   geom_density(aes(x = abundance), bounds = c(0, Inf)) +
   scale_x_log10()
 ```
 
 ### Whittaker diagram
+
+2 very abundant species
+
+```{r}
+max(BCI_50ha_abd) #to see the species with the highest density
+```
 
 ```{r}
 library("divent")
@@ -105,6 +117,8 @@ BCI_50ha_abd %>%
 ## Broken stick
 
 Random distributions are created by `divent::rxxx()`functions.
+
+Rxxx to draw random distribution
 
 ```{r}
 rcommunity(
@@ -123,18 +137,27 @@ rcommunity(
 
 ## Geometric
 
+It is very uneven.
+Large numbers of individuals are needed.
+Only used for example for soil microbes to describe their distribution.
+
+Microbes live in a very competitive system where the first species have a very unequal chance to occupy spaces.
+There is a real "first comes first serves" idea in communities creating a very strong hierarchy in the system.
+
+A sequential broken stick.
+
 Random distribution.
 
 ```{r}
 rcommunity(
-  # One community
+  # One community - in this model the number of species is what defined and what % of the resources the first species will get
   1,
   # Number of trees
-  size = 10000,
+  size = 1E6,#10000 original number
   # Number of species
   species_number = 300,
   # Distribution
-  distribution = "geom",
+  distribution = "geom", #geometric distribution
   prob_geom = 0.1
 ) %>% 
   # Whittaker plot
@@ -144,6 +167,7 @@ rcommunity(
 ## Lognormal
 
 Random distribution.
+The most probable values are calculated from it to be used for conclusions.
 
 ```{r}
 rcommunity(
@@ -155,7 +179,7 @@ rcommunity(
   species_number = 300,
   # Distribution
   distribution = "lnorm",
-  sd_lnorm = 1
+  sd_lnorm = 1 #tried with 2 and 10
 ) %>% 
   # Whittaker plot
   autoplot()
@@ -202,12 +226,12 @@ rcommunity(
   # One community
   1,
   # Number of trees = max supported integer value
-  size = .Machine$integer.max,
+  size = .Machine$integer.max, #Machine is a number of variables created by r
   # Number of species
   species_number = 300,
   # Distribution
   distribution = "lnorm",
-  sd_lnorm = 1
+  sd_lnorm = 1 #data is simulated with sigma = 1
 ) %>% 
   # Name it
   mutate(site = "Large log-normal") ->
@@ -224,7 +248,7 @@ Sample it.
 rcommunity(
   1,
   size = 3000,
-  abd = as.numeric(comm_large_lnorm)
+  abd = as.numeric(comm_large_lnorm) #abundance argument 
 ) %>% 
   # Name it
   mutate(site = "Small log-normal") ->
@@ -232,10 +256,11 @@ rcommunity(
 # Make a single tibble with all data
 comm_large_lnorm %>% 
   # Make a single tibble
-  bind_rows(comm_small_lnorm) ->
+  bind_rows(comm_small_lnorm) -> #binding two tibbles - I think they need to be the same size
   comm_lnorm
 # Plot the distributions and fit a lognormal model
 autoplot(comm_lnorm, fit_rac = TRUE, distribution = "lnorm")
+#there is a fitted line of lognormal distribution
 # Estimate the parameters
 fit_rac(comm_lnorm, distribution = "lnorm") 
 ```
@@ -245,12 +270,19 @@ Fit the distrinbution of BCI:
 ```{r}
 BCI_50ha_abd %>% 
   as_abundances() %>% 
-  autoplot(fit_rac = TRUE, distribution = "lnorm")
+  autoplot(fit_rac = TRUE, distribution = "lnorm") #fitting other models: "geom",  "bstick"for broken stick distibution, logseries "lseries" 
 ```
 
 ## Zero-sum multinomial distribution
 
+A hard way to simulate a distribution that fits neutral model.
+
 BCI parameters $\theta$ and $m$ are estimated following @etienne2005 with the *untb* package.
+
+Here is the code to run it with the BCA data.
+Already loaded is a file.
+The data is too large for R to compute it.
+R does not have enough integer space to compute it.
 
 ```{r}
 #| label: bci_params
@@ -285,36 +317,43 @@ BCI_50ha %>%
   BCI_params
 ```
 
+#Theta 47 means that in a metacommunity 47 slope, fundamental number of biodiversity in metacommunity, fishers alpha is theta in the metacommunity - to send migrants to the community.
+Migration is approx.
+0.1 so 10% - the migration always depends on theta.
+
 The distribution of the local community is derived.
 $J$ is that of BCI and $m$ was estimated previously.
+
+#Simulation of BCI data with the neutral model.
+After compare with real data.
 
 ```{r}
 #| label: bci_sim_code
 #| echo: true
-J <- sum(BCI)
-theta <- BCI_params[1]
-m <- BCI_params[2]
+J <- sum(BCI) #size of the community
+theta <- BCI_params[1] #metacommunity descriptor
+m <- BCI_params[2] #migration factor
 library("sads")
 # Number of species in the local community
 Svolkov(theta, m, J) %>% 
   # Must be integers for the simulation
   round() %>% 
   # Draw the species abundances
-  rvolkov(theta, m, J) %>% 
+  rvolkov(theta, m, J) %>%  #theta belongs to metacommunity, m and Jis a parameter of community, not metacommunity. J is the size of the community
   # Make it an abundances object top plot it
   as_abundances() %>% 
   # Whittaker plot
   autoplot() ->
   BCI_sim_neutral
 # BCI real distribution
-BCI_50ha %>% 
-  sort(decreasing = TRUE) %>% 
-  as_tibble() %>% 
-  mutate(rank = seq_len(n())) -> 
-  BCI_tbl_50ha
+BCI_50ha %>% #get the real data
+  sort(decreasing = TRUE) %>%  #sorting from the most to the least abundant
+  as_tibble() %>% #making a tibble by rank
+  mutate(rank = seq_len(n())) -> #rank computing
+  BCI_tbl_50ha #the created data
 # Plot altogether
 BCI_sim_neutral +
-  geom_line(
+  geom_line( #adding a line that is the real data of BCI - herethe simulation and then add the real data added on it
     data = BCI_tbl_50ha,
     aes(x = rank, y = value)
   )
@@ -338,7 +377,7 @@ BCI %>%
   metacommunity() %>% 
   # Name it
   mutate(site = "BCI") -> 
-  BCI_all
+  BCI_all #all distribution of 50 plots of BCI
 autoplot(BCI_all, fit_rac = TRUE, distribution = "lnorm")
 fit_rac(BCI_all, distribution = "lnorm") 
 ```
@@ -358,8 +397,8 @@ Accumulate subplots in random order (Monte-Carlo).
 Plot the expectation and the confidence interval of the number of species with respect to the number of samples.
 
 ```{r}
-BCI %>% 
-  specaccum() %>% 
+BCI %>% #accumulation curve row by row (where the columns are species) avarage
+  specaccum() %>% #accumulation of subplots(a function of vegan)
   plot()
 ```
 
@@ -367,21 +406,31 @@ BCI %>%
 
 Compute the expected accumulation curve of BCI up to twice the sampling effort, with its confidence interval.
 
+#Species accumulation curve - depends a lot on a sampling size - exact sampling effort.
+If it is small adding a few species can have a big effect.
+You need to have large samples.
+It gets relatively flat at 10000 samples (when it starts to be relatively flat)
+
 ```{r}
+#in respect to a certain number of trees
+#but what about area?
+
 # Number of trees in BCI
-BCI_n <- abd_sum(BCI_all, as_numeric = TRUE)
+BCI_n <- abd_sum(BCI_all, as_numeric = TRUE) #counting the number of trees
 # Asymptotic richness
-BCI_richness <- div_richness(BCI_all, as_numeric = TRUE)
+BCI_richness <- div_richness(BCI_all, as_numeric = TRUE) #how many species are there in total
 BCI_all %>% 
   accum_hill(
-    levels = seq(from = 1, to = 2 * BCI_n, by = 10),
+    levels = seq(from = 1, to = 2 * BCI_n, by = 10), #up to 2x the size of sample, extrapolation is valable (according to Caho 2014) by= calculation of every 10
     # Run simulations to estimate uncertainty.
     # Start with 10 simulations, run 100 later
-    n_simulations = 10,
+    n_simulations = 10, #multinomial simulation
   ) %>% 
   autoplot() +
-  geom_vline(xintercept = BCI_n, linetype = 2) +
+  geom_vline(xintercept = BCI_n, linetype = 2) + #creating a vetical line on the plot (here we set it to the sample size - after it is extrapolated)
   geom_hline(yintercept = BCI_richness, linetype = 1)
+#only ten times simulated - in order to get a better confidence line you would need 1000 times
+#confidence interval gets narrower because there are less to miss because the model because the model is in the rare species area
 ```
 
 # Canonical lognormal
@@ -454,10 +503,15 @@ tibble(
 Sample richness.
 
 ```{r}
+div_richness(comm_dummy, estimator = "naive")
+```
+
+```{r}
 div_richness(comm_dummy, estimator = "Chao1")
 ```
 
 Asymptotic richness.
+Automatic under div_richness
 
 ```{r}
 div_richness(comm_dummy)
@@ -539,14 +593,16 @@ ggplot() +
 
 ## Paracou 6
 
-Estimators.
+Estimators. 
+ 
 
 ```{r}
 ent_shannon(p6_abundances, estimator = "naive") %>% 
   bind_rows(ent_shannon(p6_abundances, estimator = "UnveilJ")) %>% 
   bind_rows(ent_shannon(p6_abundances, estimator = "ChaoJost")) %>% 
   print() ->
-  p6_shannon
+  p6_shannon 
+#weight is the same for all - because they are standardized on the size
 ```
 
 Effective number of species: $e^H$.
@@ -711,6 +767,7 @@ profile_hill(p6_abundances, orders = q_seq_0_4) %>%
 ## Standardized diversity
 
 The sampling effort is very different: 50 ha in BCI, 6.25 ha in Paracou.
+- standardizing on a chosen area size
 The asymptotic estimation is less reliable in Paracou.
 
 Compare diversity at the same sampling effort, say 10 ha.
@@ -984,10 +1041,10 @@ Change the variability (0.1 first) and run the code again.
 
 ## Mock data
 
-Three habitats: A, B, C.
+Three habitats: A, B, C. 
 
 ```{r}
-matrix(
+matrix( #original with numbers of 1 - 1 single of species
   c(
     0, 0, 0, 0, 0, 3, 3, 3, 3, 3,
     3, 3, 3, 3, 3, 3, 0, 3, 0, 0,
@@ -1008,7 +1065,7 @@ Richness.
 
 ```{r}
 div_richness(mock_island_abd)
-div_richness(mock_island_abd, gamma = TRUE)
+div_richness(mock_island_abd, gamma = TRUE) #for metacommunity all the species that can be found at least once in any of the 3 habitats
 ```
 
 Multiplicative partitioning: 10 effective species ($\gamma$) = 5 effective species per habitat ($\alpha$) times 2 habitats ($\beta$).
