@@ -68,6 +68,8 @@ It comes with a practical you will run at home (`Biodiv-Practical.Rmd`).
 
 ## Figures
 
+explicaton
+
 Explication of data: 50 (representing 50 ha) rows and 225 species (columns)
 
 Exploring the data with different representations; histogram with a log axis and line density plot with normal axes.
