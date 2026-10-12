@@ -484,6 +484,8 @@ The red curve is the smoothed Preston plot of BCI, i.e. the probability density 
 The black curve is the probability for an individual to belong to a species that contains that number of individuals.
 If it reaches its maximum value for the most abundant species, then the lognormal distribution is canonical.
 
+(# the red line is representing the most abundant species. The mean of the most abundant speceis which is here shown as half of the normal distibution.check)
+
 # Richness
 
 ## Dummy communities
@@ -498,6 +500,9 @@ tibble(
   as_abundances() %>% 
   print() ->
   comm_dummy
+#abundances - 10 and 11 individuals at site 1 and 2 
+#site 2: 20 individuals, 10 individuals and 11
+#site 3: 1000 individual and 1 singleton
 ```
 
 Sample richness.
@@ -505,21 +510,30 @@ Sample richness.
 ```{r}
 div_richness(comm_dummy, estimator = "naive")
 ```
+Estimating with Chao estimator
 
 ```{r}
 div_richness(comm_dummy, estimator = "Chao1")
+#it does not find the 3rd at site 3
 ```
 
 Asymptotic richness.
 Automatic under div_richness
 
 ```{r}
-div_richness(comm_dummy)
+div_richness(comm_dummy) #choice of estimator is automatic, Chaos estimator can be used too but needs to be specified
 ```
 
 ## Paracou 6
 
 Prepare the data: gather the four subplots.
+
+Whitteker plot for different data sets - different subplots
+
+```{r}
+paracou_6_abd %>% autoplot
+```
+All gathered points
 
 ```{r}
 paracou_6_abd %>% 
@@ -534,10 +548,20 @@ autoplot(p6_abundances)
 Abundance frequencies.
 
 ```{r}
-p6_abundances %>% 
+p6_abundances %>% #for the number of singletons and doubletons
   as.numeric() %>% 
   abd_freq_count()
+#most abundant
 ```
+
+```{r}
+#to look at abundance
+p6_abundances %>% 
+  as.numeric() %>% 
+  abd_freq_count() %>% 
+  arrange(desc(abundance))
+```
+
 
 Estimators of richness.
 
