@@ -548,7 +548,7 @@ autoplot(p6_abundances)
 Abundance frequencies.
 
 ```{r}
-p6_abundances %>% #for the number of singletons and doubletons
+p6_abundances %>% #for the number of singletons and doubletons 
   as.numeric() %>% 
   abd_freq_count()
 #most abundant
