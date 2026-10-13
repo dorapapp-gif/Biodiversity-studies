@@ -59,7 +59,7 @@ knitr::knit_hooks$set(
 
 # Motivation
 
-upload
+changes
 
 This document contains code chunks to help you understanding the course.
 Don't hesitate to modify them, add your own notes and code.
